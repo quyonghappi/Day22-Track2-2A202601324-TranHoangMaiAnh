@@ -1,0 +1,73 @@
+﻿=======================================================
+  Bước 4: Guardrails AI Validators
+=======================================================
+
+=======================================================
+  Demo: PII Detection & Redaction
+=======================================================
+  ⚠️  Đã redact 1 loại PII: ['EMAIL']
+
+[Email]
+  Input:  Contact John at john.doe@example.com for details.
+  Output: Contact John at [EMAIL_REDACTED] for details.
+  ⚠️  Đã redact 1 loại PII: ['PHONE']
+
+[Phone]
+  Input:  Call our support line at (555) 867-5309.
+  Output: Call our support line at [PHONE_REDACTED].
+  ⚠️  Đã redact 1 loại PII: ['SSN']
+
+[SSN]
+  Input:  Patient SSN is 123-45-6789 on file.
+  Output: Patient SSN is [SSN_REDACTED] on file.
+  ⚠️  Đã redact 1 loại PII: ['CREDIT_CARD']
+
+[Credit Card]
+  Input:  Payment made with card 4532 1234 5678 9010.
+  Output: Payment made with card [CREDIT_CARD_REDACTED].
+  ⚠️  Đã redact 2 loại PII: ['EMAIL', 'PHONE']
+
+[Multi-PII]
+  Input:  Email: alice@example.com, Phone: 555-123-4567
+  Output: Email: [EMAIL_REDACTED], Phone: [PHONE_REDACTED]
+
+[Clean]
+  Input:  No sensitive information in this text.
+  Output: No sensitive information in this text.
+
+=======================================================
+  Demo: JSON Formatting & Repair
+=======================================================
+
+[Valid JSON] ✅ Pass
+  Input:  {"name": "Alice", "age": 30}
+  Output: {"name": "Alice", "age": 30}
+  🔧 JSON đã được sửa thành công
+
+[Markdown fences] ✅ Pass
+  Input:  ```json
+{"name": "Bob", "score": 95}
+```
+  Output: ```json
+{"name": "Bob", "score": 95}
+```
+  🔧 JSON đã được sửa thành công
+
+[Single quotes] ✅ Pass
+  Input:  {'name': 'Charlie', 'active': true}
+  Output: {'name': 'Charlie', 'active': true}
+  🔧 JSON đã được sửa thành công
+
+[Trailing comma] ✅ Pass
+  Input:  {"items": ["a", "b",], "total": 2,}
+  Output: {"items": ["a", "b",], "total": 2,}
+
+[Truly invalid] ✅ Pass
+  Input:  This is not JSON at all: ??? {]
+  Output: {"error": "Khong the phan tich JSON", "raw": "This is not JS
+
+✅ Bước 4 hoàn thành!
+WARNING:opentelemetry.exporter.otlp.proto.http.trace_exporter:Transient error HTTPSConnectionPool(host='hty0gc1ok3.execute-api.us-east-1.amazonaws.com', port=443): Max retries exceeded with url: /v1/traces (Caused by NewConnectionError("HTTPSConnection(host='hty0gc1ok3.execute-api.us-east-1.amazonaws.com', port=443): Failed to establish a new connection: [WinError 10013] An attempt was made to access a socket in a way forbidden by its access permissions")) encountered while exporting span batch, retrying in 1.06s.
+WARNING:opentelemetry.exporter.otlp.proto.http.trace_exporter:Transient error HTTPSConnectionPool(host='hty0gc1ok3.execute-api.us-east-1.amazonaws.com', port=443): Max retries exceeded with url: /v1/traces (Caused by NewConnectionError("HTTPSConnection(host='hty0gc1ok3.execute-api.us-east-1.amazonaws.com', port=443): Failed to establish a new connection: [WinError 10013] An attempt was made to access a socket in a way forbidden by its access permissions")) encountered while exporting span batch, retrying in 1.63s.
+WARNING:opentelemetry.exporter.otlp.proto.http.trace_exporter:Transient error HTTPSConnectionPool(host='hty0gc1ok3.execute-api.us-east-1.amazonaws.com', port=443): Max retries exceeded with url: /v1/traces (Caused by NewConnectionError("HTTPSConnection(host='hty0gc1ok3.execute-api.us-east-1.amazonaws.com', port=443): Failed to establish a new connection: [WinError 10013] An attempt was made to access a socket in a way forbidden by its access permissions")) encountered while exporting span batch, retrying in 4.21s.
+ERROR:opentelemetry.exporter.otlp.proto.http.trace_exporter:Failed to export span batch due to timeout, max retries or shutdown.
