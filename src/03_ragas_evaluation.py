@@ -46,6 +46,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from ragas import evaluate, EvaluationDataset, SingleTurnSample
 from ragas.metrics import faithfulness, answer_relevancy, context_recall, context_precision
+from ragas.run_config import RunConfig
 
 from utils.llm_factory import get_llm, get_embeddings
 from utils.data_loader import load_knowledge_base, split_text, build_vectorstore
@@ -169,22 +170,33 @@ def run_ragas_eval(rag_results: list, version: str) -> dict:
     llm_eval = get_llm(temperature=0)
     emb_eval = get_embeddings()
 
+    # OpenAI Chat Completions trả về một generation cho mỗi request. Đặt
+    # strictness=1 để AnswerRelevancy không yêu cầu ba generation không hỗ trợ.
+    answer_relevancy.strictness = 1
+    # Giảm concurrency để tránh lỗi kết nối/rate limit khi đánh giá 50 mẫu.
+    run_config = RunConfig(timeout=120, max_retries=3, max_wait=15, max_workers=4)
+
     result = evaluate(
         dataset,
         metrics=[faithfulness, answer_relevancy, context_recall, context_precision],
         llm=llm_eval,
         embeddings=emb_eval,
+        run_config=run_config,
     )
 
     # Tính mean score cho mỗi metric
     scores = {}
     for key in ["faithfulness", "answer_relevancy", "context_recall", "context_precision"]:
         raw = result[key]
-        scores[key] = float(np.mean([v for v in raw if v is not None]))
+        valid_scores = [v for v in raw if v is not None and np.isfinite(v)]
+        scores[key] = float(np.mean(valid_scores)) if valid_scores else None
 
     # In kết quả
     print(f"\n📊 Kết quả RAGAS — Prompt {version.upper()}:")
     for k, v in scores.items():
+        if v is None:
+            print(f"  {k:30s}: không có mẫu hợp lệ")
+            continue
         star = " ⭐" if k == "faithfulness" and v >= 0.8 else ""
         print(f"  {k:30s}: {v:.4f}{star}")
 
@@ -216,22 +228,32 @@ def main():
     print("=" * 65)
     for metric in ["faithfulness", "answer_relevancy", "context_recall", "context_precision"]:
         s1, s2  = v1_scores[metric], v2_scores[metric]
-        winner  = "← V1" if s1 > s2 else "← V2"
-        print(f"  {metric:30s}  {s1:>8.4f}  {s2:>8.4f}  {winner}")
+        if s1 is None or s2 is None:
+            winner = "N/A"
+        else:
+            winner = "← V1" if s1 > s2 else "← V2"
+        s1_display = f"{s1:.4f}" if s1 is not None else "N/A"
+        s2_display = f"{s2:.4f}" if s2 is not None else "N/A"
+        print(f"  {metric:30s}  {s1_display:>8}  {s2_display:>8}  {winner}")
 
     # Kiểm tra mục tiêu
-    best_faith = max(v1_scores["faithfulness"], v2_scores["faithfulness"])
-    if best_faith >= 0.8:
+    faithfulness_scores = [
+        score for score in (v1_scores["faithfulness"], v2_scores["faithfulness"])
+        if score is not None
+    ]
+    best_faith = max(faithfulness_scores) if faithfulness_scores else None
+    if best_faith is not None and best_faith >= 0.8:
         print(f"\n✅ Đạt mục tiêu: faithfulness = {best_faith:.4f} ≥ 0.8")
     else:
-        print(f"\n⚠️  Chưa đạt mục tiêu ({best_faith:.4f} < 0.8).")
+        best_faith_display = f"{best_faith:.4f}" if best_faith is not None else "không có điểm hợp lệ"
+        print(f"\n⚠️  Chưa đạt mục tiêu ({best_faith_display} < 0.8).")
         print("   Gợi ý: giảm chunk_size, tăng k, hoặc điều chỉnh prompt.")
 
     # Lưu báo cáo vào data/ragas_report.json
     report = {
         "prompt_v1_scores": v1_scores,
         "prompt_v2_scores": v2_scores,
-        "target_met": best_faith >= 0.8,
+        "target_met": best_faith is not None and best_faith >= 0.8,
     }
     report_path = Path(__file__).parent.parent / "data" / "ragas_report.json"
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
